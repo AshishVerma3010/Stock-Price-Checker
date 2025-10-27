@@ -22,7 +22,6 @@
 *
 *
 *
-*
 */
 
 function objParser(str, init) {

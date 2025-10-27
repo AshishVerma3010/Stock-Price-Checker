@@ -1,5 +1,5 @@
 "use strict";
-const { Stock } = require("./models");
+const { Stock } = require("../models");
 const fetch = require("node-fetch");
 const crypto = require("crypto");
 

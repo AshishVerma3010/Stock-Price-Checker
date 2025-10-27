@@ -6,156 +6,77 @@ chai.use(chaiHttp);
 
 suite('Functional Tests', function () {
   this.timeout(10000); // allow API time to respond
+  let likes; // Variable to store like count
 
-  test('Viewing one stock: GET /api/stock-prices', function (done) {
-    chai.request(server)
-      .get('/api/stock-prices?stock=GOOG')
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.property(res.body, 'stockData');
-        assert.property(res.body.stockData, 'stock');
-        assert.property(res.body.stockData, 'price');
-        assert.property(res.body.stockData, 'likes');
-        done();
-      });
-  });
+  suite('GET /api/stock-prices', function () {
+    test('Viewing one stock: GET /api/stock-prices', function (done) {
+      chai.request(server)
+        .get('/api/stock-prices?stock=GOOG')
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.property(res.body, 'stockData');
+          assert.property(res.body.stockData, 'stock');
+          assert.property(res.body.stockData, 'price');
+          assert.property(res.body.stockData, 'likes');
+          assert.equal(res.body.stockData.stock, 'GOOG');
+          done();
+        });
+    });
 
-  test('Viewing one stock and liking it', function (done) {
-    chai.request(server)
-      .get('/api/stock-prices?stock=GOOG&like=true')
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.property(res.body.stockData, 'likes');
-        done();
-      });
-  });
+    test('Viewing one stock and liking it', function (done) {
+      chai.request(server)
+        .get('/api/stock-prices?stock=MSFT&like=true') // Use a different stock
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.property(res.body.stockData, 'likes');
+          assert.equal(res.body.stockData.stock, 'MSFT');
+          assert.isAbove(res.body.stockData.likes, 0); // Assert it has at least 1 like
+          likes = res.body.stockData.likes; // Store the like count
+          done();
+        });
+    });
 
-  test('Viewing the same stock and liking again (should not increase likes)', function (done) {
-    chai.request(server)
-      .get('/api/stock-prices?stock=GOOG&like=true')
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.property(res.body.stockData, 'likes');
-        done();
-      });
-  });
+    test('Viewing the same stock and liking again (should not increase likes)', function (done) {
+      chai.request(server)
+        .get('/api/stock-prices?stock=MSFT&like=true') // Request SAME stock
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.property(res.body.stockData, 'likes');
+          assert.equal(res.body.stockData.stock, 'MSFT');
+          assert.equal(res.body.stockData.likes, likes); // Assert likes are unchanged
+          done();
+        });
+    });
 
-  test('Viewing two stocks', function (done) {
-    chai.request(server)
-      .get('/api/stock-prices?stock=GOOG&stock=MSFT')
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.isArray(res.body.stockData);
-        assert.equal(res.body.stockData.length, 2);
-        assert.property(res.body.stockData[0], 'rel_likes');
-        done();
-      });
-  });
+    test('Viewing two stocks', function (done) {
+      chai.request(server)
+        .get('/api/stock-prices?stock=GOOG&stock=AMZN')
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.isArray(res.body.stockData);
+          assert.equal(res.body.stockData.length, 2);
+          assert.property(res.body.stockData[0], 'rel_likes');
+          assert.property(res.body.stockData[1], 'rel_likes');
+          assert.oneOf(res.body.stockData[0].stock, ['GOOG', 'AMZN']);
+          assert.oneOf(res.body.stockData[1].stock, ['GOOG', 'AMZN']);
+          done();
+        });
+    });
 
-  test('Viewing two stocks and liking them', function (done) {
-    chai.request(server)
-      .get('/api/stock-prices?stock=GOOG&stock=MSFT&like=true')
-      .end((err, res) => {
-        assert.equal(res.status, 200);
-        assert.isArray(res.body.stockData);
-        assert.property(res.body.stockData[0], 'rel_likes');
-        done();
-      });
+    test('Viewing two stocks and liking them', function (done) {
+      chai.request(server)
+        .get('/api/stock-prices?stock=GOOG&stock=AMZN&like=true')
+        .end((err, res) => {
+          assert.equal(res.status, 200);
+          assert.isArray(res.body.stockData);
+          assert.property(res.body.stockData[0], 'rel_likes');
+          assert.property(res.body.stockData[1], 'rel_likes');
+          assert.oneOf(res.body.stockData[0].stock, ['GOOG', 'AMZN']);
+          assert.oneOf(res.body.stockData[1].stock, ['GOOG', 'AMZN']);
+          // Assert that rel_likes are opposites
+          assert.equal(res.body.stockData[0].rel_likes, -res.body.stockData[1].rel_likes);
+          done();
+        });
+    });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const chaiHttp = require('chai-http');
-// const chai = require('chai');
-// const assert = chai.assert;
-// const server = require('../server');
-
-// chai.use(chaiHttp);
-
-// suite('Functional Tests', function() {
-//     suite("5 functional get request tests", function() {
-//         test("Viewing one stock", function(done) {
-//             chai.request(server)
-//                 .get('/api/stock-prices')
-//                 .set("content-type", "application/json")
-//                 .query({ stock: 'GOOG' })
-//                 .end(function(err, res) {
-//                     assert.equal(res.status, 200);
-//                     assert.equal(res.body.stockData.stock, 'GOOG');
-//                     assert.exists(res.body.stockData.price, "GOOG has a price");
-//                     done();
-//                 });
-//         });
-
-//         test("Viewing one stock and liking it", function(done) {
-//             chai.request(server)
-//                 .get('/api/stock-prices')
-//                 .set("content-type", "application/json")
-//                 .query({ stock: 'GOLD', like: true })
-//                 .end(function(err, res) {
-//                     assert.equal(res.status, 200);
-//                     assert.equal(res.body.stockData.stock, 'GOLD');
-//                     assert.equal(res.body.stockData.likes, 1);
-//                     assert.exists(res.body.stockData.price, "GOLD has a price");
-//                     done();
-//                 });
-//         });
-
-//         test("Viewing the same stock and liking it again", function(done) {
-//             chai.request(server)
-//                 .get('/api/stock-prices')
-//                 .set("content-type", "application/json")
-//                 .query({ stock: 'GOLD', like: true })
-//                 .end(function(err, res) {
-//                     assert.equal(res.status, 200);
-//                     assert.equal(res.body.stockData.stock, 'GOLD');
-//                     assert.equal(res.body.stockData.likes, 1);
-//                     assert.exists(res.body.stockData.price, "GOLD has a price");
-//                     done();
-//                 });
-//         });
-
-//         test("Viewing two stocks", function(done) {
-//             chai.request(server)
-//                 .get('/api/stock-prices')
-//                 .set("content-type", "application/json")
-//                 .query({ stock: ["GOLD", "V"] }) // Fixed typo here
-//                 .end(function(err, res) {
-//                     assert.equal(res.status, 200);
-//                     assert.equal(res.body.stockData[0].stock, 'GOLD');
-//                     assert.equal(res.body.stockData[1].stock, 'V');
-//                     assert.exists(res.body.stockData[0].price, "GOLD has a price");
-//                     assert.exists(res.body.stockData[1].price, "V has a price");
-//                     done();
-//                 });
-//         });
-
-//         test("Viewing two stocks and liking them", function(done) {
-//             chai.request(server)
-//                 .get('/api/stock-prices')
-//                 .set("content-type", "application/json")
-//                 .query({ stock: ["GOLD", "V"], like: true }) // Fixed typo here
-//                 .end(function(err, res) {
-//                     assert.equal(res.status, 200);
-//                     assert.equal(res.body.stockData[0].stock, 'GOLD');
-//                     assert.equal(res.body.stockData[1].stock, 'V');
-//                     assert.exists(res.body.stockData[0].price, "GOLD has a price");
-//                     assert.exists(res.body.stockData[1].price, "V has a price");
-//                     assert.equal(res.body.stockData[0].rel_likes, 0);
-//                     assert.equal(res.body.stockData[1].rel_likes, 0);
-//                     done();
-//                 });
-//         });
-//     });
-// });
